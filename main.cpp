@@ -17,33 +17,43 @@ public:
     Value() : data(0), grad(0), prev(), backwardFunction([](){ /* do nothing */ }) {}
     Value(double data, const initializer_list<Value*>& children = {})
         : data(data), grad(0), prev(children), backwardFunction([](){ /* do nothing */ }) {}
-
+    // Overloaded << operator to print Value objects
+    friend std::ostream& operator<<(std::ostream& os, const Value& v) {
+        os << "Value(data=" << v.data << ", grad=" << v.grad << ")";
+        return os;
+    }
     // Getters
     double getGrad() const { return grad; }
     double getValue() const { return data; }
 
     // Operator overloadings
-    Value operator+(Value& other) {
+    Value operator+( Value& other) {
         Value out;
         out.data = this->data + other.data;
-        cout << "assigning backward for +" << endl;
-        out.backwardFunction = bind(&Value::backwardAdd, this, ref(other), ref(out));
-        return out;
-    }
+        out.backwardFunction = [this, &out, &other]() {
+            // During backpropagation
+            cout << "location of this inside operator+ : " << this << endl;
+            cout << "location of out inside operator+ : " << &out << endl;
+            cout << "location of other inside operator+ : " << &other << endl;
+            cout << "running backward for +" << endl;
+            // Calculate the contribution of this node (a) to the output gradient
+            double this_grad_contribution = out.grad;  // out.grad holds the gradient from previous node
+            cout << "Incrementing gradient of this (a): " << this->grad << " by " << this_grad_contribution << endl;
+            this->grad += this_grad_contribution;
+            cout << "Resulting gradient of this (a): " << this->grad << endl;
 
-    void backwardAdd(Value& other, Value& out) {
-        cout << "running backward for +" << endl;
-        cout << "Incrementing gradient of this (a): " << this->grad << " by " << out.grad << endl;
-        this->grad += out.grad;
-        cout << "Resulting gradient of this (a): " << this->grad << endl;
-        cout << "Incrementing gradient of other (b): " << other.grad << " by " << out.grad << endl;
-        other.grad += out.grad;
-        cout << "Resulting gradient of other (b): " << other.grad << endl;
-        // No need to modify 'out.grad' here
-    }
+            // Calculate the contribution of other node (b) to the output gradient (usually same as this)
+            double other_grad_contribution = this_grad_contribution;  // Assuming equal contribution from both operands
+            cout << "Incrementing gradient of other (b): " << other.grad << " by " << other_grad_contribution << endl;
+            other.grad += other_grad_contribution;
+            cout << "Resulting gradient of other (b): " << other.grad << endl;
+        };
+        cout << "backward of +" << endl;
+        return out;
+        }
 
     void backward() {
-        cout << "vos" << endl;
+        cout << "hello" << endl;
         vector<Value*> topo;
         set<Value*> visited;
         const function<void(Value*)> buildTopo = [&](Value* v) {
@@ -55,24 +65,26 @@ public:
                 topo.push_back(v);
             }
         };
-
         buildTopo(this);
 
-        grad = 1;
-        for (auto it = topo.rbegin(); it != topo.rend(); ++it) {
-            cout << (*it)->data << endl;
-            (*it)->backwardFunction();
+        // Set the gradient of the output node to 1
+        this->grad = 1;
 
+        cout << "address of this : " << this << endl;
+        for (auto it = topo.rbegin(); it != topo.rend(); ++it) {
+            cout << "yeta hera ta " << (*it)->grad << endl;
+            cout << "address of it : " << *it << endl;
+            (*it)->backwardFunction();
         }
     }
 };
 
 int main() {
-    Value a(4);
-    Value b(2);
-    Value c;
+    Value a= Value(4);
+    Value b= Value(2);
     cout << "-----------------" << endl;
-    c = a + b + a;
+    Value c = a + b +a;
+    cout << "address of c : "<<&c  << endl;
     cout << "-----------------" << endl;
     cout << "Value of c after calculation: " << c.getValue() << endl;
     cout << "Gradient of a: " << a.getGrad() << endl;
