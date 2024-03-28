@@ -10,7 +10,7 @@ class Value {
 public:
     double data;
     double grad;
-    set<Value*> prev;
+    set<Value*> prev ={};
     function<void()> backwardFunction;
 
     // Constructors
@@ -30,27 +30,42 @@ public:
     Value operator+( Value& other) {
         Value out;
         out.data = this->data + other.data;
+        out.prev = {this, &other};
         out.backwardFunction = [this, &out, &other]() {
-            // During backpropagation
-            cout << "location of this inside operator+ : " << this << endl;
-            cout << "location of out inside operator+ : " << &out << endl;
-            cout << "location of other inside operator+ : " << &other << endl;
-            cout << "running backward for +" << endl;
-            // Calculate the contribution of this node (a) to the output gradient
-            double this_grad_contribution = out.grad;  // out.grad holds the gradient from previous node
-            cout << "Incrementing gradient of this (a): " << this->grad << " by " << this_grad_contribution << endl;
-            this->grad += this_grad_contribution;
-            cout << "Resulting gradient of this (a): " << this->grad << endl;
-
-            // Calculate the contribution of other node (b) to the output gradient (usually same as this)
-            double other_grad_contribution = this_grad_contribution;  // Assuming equal contribution from both operands
-            cout << "Incrementing gradient of other (b): " << other.grad << " by " << other_grad_contribution << endl;
-            other.grad += other_grad_contribution;
-            cout << "Resulting gradient of other (b): " << other.grad << endl;
+            this->grad += out.grad; ;
+            other.grad += out.grad; ;
         };
-        cout << "backward of +" << endl;
         return out;
         }
+    Value operator-( Value& other) {
+        Value out;
+        out.data = this->data - other.data;
+        out.backwardFunction =[this,&out,&other](){
+            this->grad += out.grad;
+            other.grad -= out.grad;
+        };
+        return out;
+    }
+    
+    Value operator*( Value& other) {
+        Value out;
+        out.data = this->data * other.data;
+        out.backwardFunction =[this,&out,&other](){
+            this->grad += other.data * out.grad;
+            other.grad += this->data * out.grad;
+        };
+        return out;
+    } 
+    
+    Value operator^(const Value& other) {
+        Value out;
+        out.data = pow(this->data, other.data);
+        out.backwardFunction =[this,&out,&other](){
+            this->grad += other.data * pow(this->data, other.data - 1) * out.grad;
+        };
+        return out;
+    }
+
 
     void backward() {
         cout << "hello" << endl;
@@ -60,6 +75,7 @@ public:
             if (visited.count(v) == 0) {
                 visited.insert(v);
                 for (const auto child : v->prev) {
+                    cout << "child: "<<*child << endl;
                     buildTopo(child);
                 }
                 topo.push_back(v);
@@ -67,13 +83,15 @@ public:
         };
         buildTopo(this);
 
-        // Set the gradient of the output node to 1
         this->grad = 1;
-
-        cout << "address of this : " << this << endl;
+        cout << "-----------------" << endl;
+        // Print the topological order
+            cout << "Topological Order:" << endl;
+            for (auto node : topo) {
+                cout << "Node address: " << *node << endl;
+            }
+        cout << "-----------------" << endl;
         for (auto it = topo.rbegin(); it != topo.rend(); ++it) {
-            cout << "yeta hera ta " << (*it)->grad << endl;
-            cout << "address of it : " << *it << endl;
             (*it)->backwardFunction();
         }
     }
@@ -82,17 +100,17 @@ public:
 int main() {
     Value a= Value(4);
     Value b= Value(2);
-    cout << "-----------------" << endl;
-    Value c = a + b +a;
-    cout << "address of c : "<<&c  << endl;
-    cout << "-----------------" << endl;
-    cout << "Value of c after calculation: " << c.getValue() << endl;
-    cout << "Gradient of a: " << a.getGrad() << endl;
+    Value c = a * b ;
+    cout << "a 4 loc = " << &a << endl;
+    cout << "b 2 loc = " << &b << endl;
+    cout << "c loc = " << &c << endl;
+            cout << "-----------------" << endl;
     c.backward();
     cout << "Gradient of a after backward propagation: " << a.getGrad() << endl;
     cout << "c data = " << c.getValue() << endl;
-    cout << "c grad = " << c.getGrad() << endl;
     cout << "a grad = " << a.getGrad() << endl;
     cout << "b grad = " << b.getGrad() << endl;
+    cout << "c grad = " << c.getGrad() << endl;
+    cout<<1+3+4;
     return 0;
 }
