@@ -69,10 +69,13 @@ public:
         };
         return out;
     }
-
+    Value relu(){
+        Value out;
+        data < 0 ?out.data = 0:out.data=data;
+        return out;
+    }
 
     void backward() {
-        cout << "hello" << endl;
         vector<Value*> topo;
         set<Value*> visited;
         const function<void(Value*)> buildTopo = [&](Value* v) {
@@ -88,15 +91,12 @@ public:
         buildTopo(this);
 
         this->grad = 1;
-        cout << "-----------------" << endl;
-        // Print the topological order
-            cout << "Topological Order:" << endl;
             for (auto node : topo) {
-                cout << "Node address: " << *node << endl;
             }
-        cout << "-----------------" << endl;
         for (auto it = topo.rbegin(); it != topo.rend(); ++it) {
             (*it)->backwardFunction();
         }
     }
 };
+
+#endif
