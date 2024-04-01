@@ -72,8 +72,21 @@ public:
     Value relu(){
         Value out;
         data < 0 ?out.data = 0:out.data=data;
+        out.backwardFunction =[this, &out]() {
+            grad += (out.data > 0) ? out.grad : 0.0;
+        };
         return out;
+
     }
+    Value sigmoid() {
+    Value out;
+    out.data = 1.0 / (1.0 + exp(-data));
+    out.backwardFunction = [this, &out]() {
+        double temp = out.data * (1 - out.data);
+        grad += temp * out.grad;
+    };
+    return out;
+}
 
     void backward() {
         vector<Value*> topo;
